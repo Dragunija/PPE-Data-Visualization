@@ -1,0 +1,27 @@
+#!/home/darius/Documents/PPE-Data-Visualization/venv/bin/python3
+
+"""\
+Usage: %prog [-f dbfile] [-E energy_in_GeV] pid1 pid2 ...
+
+Print out particle information for each listed PID, including
+mean displacement if the energy is given.
+"""
+
+from __future__ import print_function
+
+import optparse
+op = optparse.OptionParser(usage=__doc__)
+op.add_option("-f", "--dbfile", action="store", dest="FILE", metavar="FILE", help="specify the db file to read", default=None)
+op.add_option("-E", "--energy", action="store", dest="ENERGY", type=float, metavar="E_IN_GEV", help="particle energy in GeV (must be greater than the mass)", default=None)
+opts, args = op.parse_args()
+
+import pypdt
+t = pypdt.ParticleDataTable(opts.FILE if opts.FILE else None)
+for pid in args:
+    disp = None
+    if opts.ENERGY:
+        disp = t[pid].mean_disp(opts.ENERGY)
+    if disp:
+        print("%s, mean disp=%.2g mm" % (t[pid], disp))
+    else:
+        print(t[pid])
