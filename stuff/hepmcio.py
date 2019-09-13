@@ -1,4 +1,4 @@
-# -*- python -*-
+from itertools import count
 
 """\
 A simple pure-Python parser for HepMC IO_GenEvent ASCII event files, which may
@@ -60,7 +60,9 @@ class Vertex(object):
 
 
 class Event(object):
+    nos = count(0)
     def __init__(self):
+        self.no = next(self.nos)
         self.num = None
         self.weights = None
         self.units = [None, None]
