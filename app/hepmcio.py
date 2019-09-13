@@ -77,7 +77,7 @@ class Event(object):
 class HepMCReader(object):
 
     def __init__(self, file):
-        self._file = file.enc
+        self._file = file
         self._currentline = None
         self._currentvtx = None
         self.version = None
@@ -148,6 +148,14 @@ class HepMCReader(object):
                 break
             self._read_next_line()
         return evt
+    
+    def all_events(self):
+        events = []
+        evt = self.next()
+        while evt is not None:
+            events.append(evt)
+            evt = self.next()
+        return events
 
 
 class HepMCWriter(object):

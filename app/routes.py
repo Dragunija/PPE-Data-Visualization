@@ -3,6 +3,7 @@ from flask import render_template, request
 from app import hepmcio_json
 from app import hepmcio
 import os
+import json
 import io
 
 @app.route('/')
@@ -17,10 +18,8 @@ def upload():
 @app.route('/uploader', methods=['GET', 'POST'])
 def uploader():
 	if request.method == 'POST':
-		jsonified = hepmcio_json.encodeFile(hepmcio.HepMCReader(io.StringIO(request.files['file'].read().decode('utf-8'))).next())
-		mongo.db.events.insert_one(jsonified[0])
-		mongo.db.particles.insert_many(jsonified[1])
-		mongo.db.vertices.insert_many(jsonified[2])
+		string_stream = io.StringIO(request.files['file'].read().decode('utf-8'))
+		events = hepmcio.HepMCReader(string_stream).next()
 		return "upload succesful"
 
 
