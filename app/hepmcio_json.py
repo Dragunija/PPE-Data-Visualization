@@ -58,7 +58,7 @@ def decodeEvent(evt, particles, vertices):
     for v in vertices:
         v.evt = evt
     evt.particles = {p.barcode:p for p in particles}
-    evt.vertices = {v.barocde:v for v in vertices}
+    evt.vertices = {v.barcode:v for v in vertices}
     return evt
 
 

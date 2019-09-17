@@ -3,7 +3,7 @@ import os
 import json
 from app import app, mongo, hepmcio, hepmcio_json
 
-class BasicTests(unittest.TestCase):
+class HepMCTests(unittest.TestCase):
 
     def setUp(self):
         app.config['TESTING'] = True
@@ -55,6 +55,12 @@ class BasicTests(unittest.TestCase):
         print(type(jsonEvent))
         self.assertIsInstance(jsonEvent, str)
         self.assertIsInstance(jsonEventDecoded, dict)
+
+    def testEventDeserialize(self):
+        evt = self.openEvent()
+        jsonified = hepmcio_json.encodeEvent(evt)
+        deJsonified = hepmcio_json.decodeEvent(jsonified[0], jsonified[1], jsonified[2])
+        self.assertEqual(evt, deJsonified)
         
 
 if __name__ == "__main__":

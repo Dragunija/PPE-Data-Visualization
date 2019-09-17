@@ -1,10 +1,11 @@
 from flask import Flask
+from app import config
 from flask_bootstrap import Bootstrap
 from flask_pymongo import PyMongo
 
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/myDatabase"
+app.config.from_object(config.Config)
 bootstrap = Bootstrap(app)
 mongo = PyMongo(app)
 

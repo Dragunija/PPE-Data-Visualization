@@ -1,4 +1,4 @@
-# -*- python -*-
+from itertools import count
 
 """\
 A simple pure-Python parser for HepMC IO_GenEvent ASCII event files, which may
@@ -32,13 +32,15 @@ class Particle(object):
 
     def children(self):
         return self.vtx_end().children() if self.vtx_end() else None
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.evt == other.evt and self.barcode == other.barcode and self.pid == other.pid and self.status == other.status and self.mom == other.mom and self.nvtx_start == other.nvtx_start and self.nvtx_end == other.nvtx_end and self.mass == other.mass
+        return False
 
     def __repr__(self):
         return "P" + str(self.barcode)
-        # return "Particle[bc=%d, st=%d, pid=%d, v0=%d, v1=%d, p=(%1.2e, %1.2e, %1.2e; %1.2e)]" \
-        #        % (self.barcode, self.status, self.pid,
-        #           self.nvtx_start, self.nvtx_end,
-        #           self.mom[0], self.mom[1], self.mom[2], self.mom[3])
+        
 
 
 class Vertex(object):
@@ -53,25 +55,36 @@ class Vertex(object):
     def children(self):
         return [p for p in self.evt.particles.values() if p.nvtx_start == self.barcode]
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.evt == other.evt and self.pos == other.pos and self.barcode == other.barcode
+        return False
+
     def __repr__(self):
         return "V" + str(self.barcode)
-        # return "Vertex[bc=%d, x=(%1.2e, %1.2e, %1.2e; %1.2e)]" \
-        #        % (self.barcode, self.pos[0], self.pos[1], self.pos[2], self.pos[3])
+       
 
 
 class Event(object):
+    nos = count(1)
     def __init__(self):
+        self.no = next(self.nos)
         self.num = None
         self.weights = None
         self.units = [None, None]
         self.xsec = [None, None]
         self.particles = {}
         self.vertices = {}
+    
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.num == other.num and self.weights == other.weights and self.units == other.units and self.xsec == other.xsec 
+        return False
 
     def __repr__(self):
-        return "E%d. #p=%d #v=%d, xs=%1.2e+-%1.2e" % \
+        return "E%d. #p=%d #v=%d, xs=%1.2e+-%1.2e, No%d" % \
                (self.num, len(self.particles), len(self.vertices),
-                self.xsec[0], self.xsec[1])
+                self.xsec[0], self.xsec[1], self.no)
 
 
 class HepMCReader(object):
@@ -123,13 +136,16 @@ class HepMCReader(object):
             vals = self._currentline.split()
             if vals[0] == "U":
                 evt.units = vals[1:3]
+                #print("U")
             elif vals[0] == "C":
                 evt.xsec = [float(x) for x in vals[1:3]]
+                #print("C")
         ## Read the event content lines until an Event line is encountered
         while not self._currentline.startswith("E "):
             vals = self._currentline.split()
             if vals[0] == "P":
                 bc = int(vals[1])
+                #print("P", bc)
                 try:
                     p = Particle(barcode=bc, pid=int(vals[2]), mom=[float(x) for x in vals[3:7]], event=evt)
                     p.mass = float(vals[7])
@@ -141,6 +157,7 @@ class HepMCReader(object):
                     print (vals)
             elif vals[0] == "V":
                 bc = int(vals[1])
+                #print("V", bc)
                 self._currentvtx = bc # current vtx barcode for following Particles
                 v = Vertex(barcode=bc, pos=[float(x) for x in vals[3:7]], event=evt)
                 evt.vertices[bc] = v
