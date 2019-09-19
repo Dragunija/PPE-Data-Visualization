@@ -1,70 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
+	<style>
+	#info {
+	position: absolute;
+	border: 3px solid lightblue;
+	background-color: lightgray;
+	top: 11%;
+	height: 150px;
+	width: 200px;
+	z-index: 100;
+	display:block;
+}
+	</style>
+	<div id="info">Test </div>
 	<script src={{url_for('static', filename='three.js')}}></script>
-		<script>
-	var camera, controls, scene, renderer;
-var material, geometry, line, light;
-init();
-animate();
-
-function init() {
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-
-  camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.01, 5000 );
-  camera.position.set( 400, 150, 700 );
-  camera.lookAt( new THREE.Vector3( 0, 0, 0 ) );
-
-  controls = new THREE.OrbitControls( camera, renderer.domElement );
- 
-
-  scene = new THREE.Scene();
-
-  light = new THREE.PointLight(0xffffff);
-  light.position.set(200.0, 200.0, 500.0);
-  scene.add( light );
-  light = new THREE.AmbientLight(0x444444)
-  scene.add( light );
-
-  var material_det = new THREE.MeshLambertMaterial( { color: 0x9999ff, transparent: true, opacity: 0.4, emissive: 10, reflectivity: 1 } );
-  var material_beam = new THREE.LineDashedMaterial( { color: 0x666666, linewidth: 5. } );
-  var material_pho = new THREE.LineBasicMaterial( { color: 0x0099aa, linewidth: 2. } );
-  var material_lep = new THREE.LineBasicMaterial( { color: 0xddbb00, linewidth: 4. } );
-  var material_nu  = new THREE.LineBasicMaterial( { color: 0x333333, linewidth: 2. } );
-  var material_had = new THREE.LineBasicMaterial( { color: 0x338833, linewidth: 2. } );
-
-  geometry = new THREE.Geometry();
-  geometry.vertices.push(new THREE.Vector3( 0, 0, -10000 ) );
-  geometry.vertices.push(new THREE.Vector3( 0, 0,  10000 ) );
-  line = new THREE.Line( geometry, material_beam );
-  scene.add( line );
-
-  var geometry = new THREE.CylinderGeometry( 115.0, 115.0, 700.0, 64 );
-  var solenoid = new THREE.Mesh( geometry, material_det );
-  solenoid.rotation.x += Math.PI / 2
-  scene.add( solenoid );
-  var particleData = {{ particles | tojson }};
-  var particleLength = particleData.length
-	//if {{ view }} === 1 {
-	//for (var i = 0; i < particleLength; i++) {
-	//	var verts = [0, 0, 0, particleData[i].slice(0, 3)]
-	//	geometry = new THREE.Geometry();
-	//	geometry.vertices.push(new THREE.Vector3(verts[0], verts[1], verts[2])
-	//	geometry.vertices.push(new THREE.Vector3[verts[3][0], verts[3][1], verts[3][2])
-//}
-//}
-
-}
-
-function animate() {
-    requestAnimationFrame( animate );
-    render();
-}
-
-function render() {
-    renderer.render( scene, camera );
-}
-		</script>
+	<script src={{url_for('static', filename='OrbitControls.js')}}></script>
+        <script src={{url_for('static', filename='jquery-3.4.1.js')}}></script>
+	<script src={{url_for('static', filename='visualiser.js')}}></script>
+	<script>initVars({{view}}, {{particles | tojson}} );
+	</script>
+	
+	
 	{% endblock %}

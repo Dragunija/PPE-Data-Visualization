@@ -1,5 +1,5 @@
 from app import app, mongo
-from flask import render_template, request, redirect
+from flask import render_template, request, redirect, jsonify
 from werkzeug import secure_filename
 from app import hepmcio_json
 from app import hepmcio
@@ -61,11 +61,29 @@ def uploader():
 @app.route("/visualiser/<string:filename>/<int:view>")
 def visualiser(filename, view):
 	collection = mongo.db[filename]
-	event = collection.find_one({"type":"event"})
+	event = collection.find_one({"type":"event", "no":1}, {"_id":False})
 	particleJson = collection.find({"type":"particle", "event":event["barcode"]}, {"_id":False})
 	particles = []
 	for particle in particleJson:
 		particles.append(particle)
-	vertices = collection.find({"type":"vertex", "event":event["barcode"]})
-	return render_template("visualiser.html", title="Visualiser", event=event, particles=particles, vertices=vertices, view=view)
+	vertices = []
+	vertexJson = collection.find({"type":"vertex", "event":event["barcode"]}, {"_id":False})
+	for vertex in vertexJson:
+		vertices.append(vertex)
+	return render_template("visualiser.html", title="Visualiser", filename=filename, event=event, particles=particles, vertices=vertices, view=view)
 	
+@app.route('/visualiser/get_event', methods=['GET'])
+def get_event():
+	no = request.args.get('no')
+	filename = request.args.get('filename')
+	collection = mongo.db[filename]
+	event = collection.find_one({"type":"event", "no":int(no)}, {"_id":False})
+	particleJson = collection.find({"type":"particle", "event":event["barcode"]}, {"_id":False})
+	particles = []
+	for particle in particleJson:
+		particles.append(particle)
+	vertices = []
+	vertexJson = collection.find({"type":"vertex", "event":event["barcode"]}, {"_id":False})
+	for vertex in vertexJson:
+		vertices.append(vertex)
+	return jsonify(particles=particles)
