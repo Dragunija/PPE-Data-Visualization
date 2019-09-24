@@ -34,18 +34,21 @@ def uploader():
 			#The file is a byte stream by default which is not compatible with the current version of hepmcio.
 			string_stream = io.StringIO(File.read().decode('utf-8'))
 
+			#Get all events from file and jsonify them.
 			events = hepmcio.HepMCReader(string_stream).all_events()
-			jsonified = [hepmcio_json.encodeEvent(event) for event in events]
+			hepMCEncoder = hepmcio_json.HepMCJSONEncoder()
+			jsonified = [hepMCEncoder.encode(event) for event in events]
 
 			#Each collection contains all the data in a file.
 			if filename not in mongo.db.collection_names():
 				collection = mongo.db[filename]
 				jsonDecoder = json.JSONDecoder()
 
-				for dataTuple in jsonified:
-					jsonEvent = jsonDecoder.decode(dataTuple[0])
-					jsonParticles = [jsonDecoder.decode(p) for p in dataTuple[1]]
-					jsonVertices = [jsonDecoder.decode(v) for v in dataTuple[2]]
+				#MongoDB takes in Python objects and not JSON strings, so have to decode before adding documents.
+				for jsonObject in jsonified:
+					jsonEvent = jsonDecoder.decode(jsonObject.evt)
+					jsonParticles = [jsonDecoder.decode(p) for p in jsonObject.particles]
+					jsonVertices = [jsonDecoder.decode(v) for v in jsonObject.vertices]
 
 					collection.insert_one(jsonEvent)
 					collection.insert_many(jsonParticles)

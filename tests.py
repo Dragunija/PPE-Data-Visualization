@@ -27,7 +27,7 @@ class HepMCTests(unittest.TestCase):
         self.assertEqual(evt1,evt2)
 
     
-    def testParticleJson(self):
+    def testParticleEncode(self):
         evt = self.openEvent()
         jsonEncoder = hepmcio_json.ParticleEncoder()
         jsonDecoder = json.JSONDecoder()
@@ -37,7 +37,7 @@ class HepMCTests(unittest.TestCase):
             self.assertIsInstance(jsonParticle, str)
             self.assertIsInstance(jsonParticleDecoded, dict)
     
-    def testVertexJson(self):
+    def testVertexEncode(self):
         evt = self.openEvent()
         jsonEncoder = hepmcio_json.VertexEncoder()
         jsonDecoder = json.JSONDecoder()
@@ -48,7 +48,7 @@ class HepMCTests(unittest.TestCase):
             self.assertIsInstance(jsonVertexDecoded, dict)
 
 
-    def testEventJson(self):
+    def testEventEncode(self):
         evt = self.openEvent()
         jsonEvent = hepmcio_json.EventEncoder().encode(evt)
         jsonEventDecoded = json.JSONDecoder().decode(jsonEvent)
@@ -56,10 +56,12 @@ class HepMCTests(unittest.TestCase):
         self.assertIsInstance(jsonEvent, str)
         self.assertIsInstance(jsonEventDecoded, dict)
 
-    def testEventDeserialize(self):
+    def testEventDecode(self):
         evt = self.openEvent()
-        jsonified = hepmcio_json.encodeEvent(evt)
-        deJsonified = hepmcio_json.decodeEvent(jsonified[0], jsonified[1], jsonified[2])
+        hepMCEncoder = hepmcio_json.HepMCJSONEncoder()
+        hepMCDecoder = hepmcio_json.HepMCJSONDecoder()
+        jsonified = hepMCEncoder.encode(evt)
+        deJsonified = hepMCDecoder.decode(jsonified)
         self.assertEqual(evt, deJsonified)
         
 
