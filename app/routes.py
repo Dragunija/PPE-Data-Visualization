@@ -1,23 +1,40 @@
 from app import app, mongo
-from flask import render_template, request, redirect, jsonify
+from flask import render_template, request, jsonify
+import operator
 from werkzeug import secure_filename
 from app import hepmcio_json
 from app import hepmcio
 import os
 import json
 import io
+from functools import reduce
 
 @app.route('/')
 @app.route('/index')
 def index():
+	"""
+	View for the home page.
+	"""
 	return render_template("index.html", title="Home")
 
 @app.route('/upload')
 def upload():
+	"""
+	View for the upload page.
+	"""
 	return render_template("upload.html", title="Upload a file")
 
 @app.route('/uploader', methods=['GET', 'POST'])
 def uploader():
+	"""
+	A view for the file upload action. Retrieves file from a form, parses it using HepMCIO and uploads
+	the parsed data to the database.
+
+	Multiple checks are performed to see whether the file upload is well-formed.
+
+	Returns:
+	response string -- a string indicating the outcome of the upload.
+	"""
 	if request.method == 'POST':
 		
 		if "file" not in request.files:
@@ -61,32 +78,107 @@ def uploader():
 		return "Incorrect file type."
 
 
-@app.route("/visualiser/<string:filename>/<int:view>")
-def visualiser(filename, view):
+@app.route("/visualiser/<string:filename>/")
+def visualiser(filename):
+	"""
+	View for the Visualiser. Gets first event in requested file and returns particle/vertex data
+	to the Visualiser template/JS.
+
+	Arguments:
+	filename -- the name of the required file provided in the URL.
+
+	Returns:
+	file - filename provided in the URL.
+	particles - an array of interesting particles from the first event in the file.
+	vertices - an array of vertices from the first event in the file.
+	
+	Returned to the render_template call.
+	"""
 	collection = mongo.db[filename]
+	jsonEncoder = hepmcio_json.HepMCJSONEncoder()
+	hepMCDecoder = hepmcio_json.HepMCJSONDecoder()
+	jsonDecoder = json.JSONDecoder()
+	#Get first event data in file and decode to HepMCIO objects.
 	event = collection.find_one({"type":"event", "no":1}, {"_id":False})
 	particleJson = collection.find({"type":"particle", "event":event["barcode"]}, {"_id":False})
 	particles = []
 	for particle in particleJson:
-		particles.append(particle)
+		particles.append(jsonEncoder.encode(particle))
+	
 	vertices = []
 	vertexJson = collection.find({"type":"vertex", "event":event["barcode"]}, {"_id":False})
 	for vertex in vertexJson:
-		vertices.append(vertex)
-	return render_template("visualiser.html", title="Visualiser", filename=filename, event=event, particles=particles, vertices=vertices, view=view)
+		vertices.append(jsonEncoder.encode(vertex))
+	event = jsonEncoder.encode(event)
+	
+	
+	#Decode event to find interesting particles, i.e. particles above PT_CUTOFF and their ancestors..
+	eventObject = hepmcio_json.EventJSONObject(event, particles, vertices)
+	decodedEvent = hepMCDecoder.decode(eventObject)
+
+	PT_CUTOFF = 0.0
+	intParticles = [particle for particle in decodedEvent.particles.values() if particle.status!=1 and \
+		particle.mom[0]**2 + particle.mom[1]**2 > PT_CUTOFF**2]
+	#Build a single list from the individual particle ancestor lists.
+	intParticleAncestors = reduce(operator.concat, [hepmcio.get_ancestors(particle)[:-1] for particle in intParticles])
+
+	particles = []
+	for particle in (intParticles + intParticleAncestors):
+		#Encode particle to JSON, decode to Python dicts.
+		particles.append(jsonDecoder.decode(jsonEncoder.encode(particle)))
+	#Decode to Python dicts.
+	vertices = list(map(jsonDecoder.decode, vertices))
+	
+	return render_template("visualiser.html", title="Visualiser", file=filename, particles=particles, vertices=vertices)
 	
 @app.route('/visualiser/get_event', methods=['GET'])
 def get_event():
+	"""
+	A view for the AJAX call from the Visualiser. Receives an HTTP GET and retrieves an event.
+
+	HTTP request:
+	no -- number of the event to be retrieved.
+	filename - filename for the file.
+
+	Returns:
+	A dict containing:
+	particles -- an array of interesting particles from the event.
+	vertices -- an array of interesting vertices from the event.
+	"""
+	#Get HTTP query args.
 	no = request.args.get('no')
 	filename = request.args.get('filename')
 	collection = mongo.db[filename]
+
+	jsonEncoder = hepmcio_json.HepMCJSONEncoder()
+	hepMCDecoder = hepmcio_json.HepMCJSONDecoder()
+	jsonDecoder = json.JSONDecoder()
+	#Everything below same as in the Visualiser view.
 	event = collection.find_one({"type":"event", "no":int(no)}, {"_id":False})
 	particleJson = collection.find({"type":"particle", "event":event["barcode"]}, {"_id":False})
 	particles = []
 	for particle in particleJson:
-		particles.append(particle)
+		particles.append(jsonEncoder.encode(particle))
 	vertices = []
 	vertexJson = collection.find({"type":"vertex", "event":event["barcode"]}, {"_id":False})
 	for vertex in vertexJson:
-		vertices.append(vertex)
-	return jsonify(particles=particles)
+		vertices.append(jsonEncoder.encode(vertex))
+	event = jsonEncoder.encode(event)
+
+	eventObject = hepmcio_json.EventJSONObject(event, particles, vertices)
+	
+	decodedEvent = hepMCDecoder.decode(eventObject)
+
+	PT_CUTOFF = 0.0
+	intParticles = [particle for particle in decodedEvent.particles.values() if particle.status!=1 and \
+		particle.mom[0]**2 + particle.mom[1]**2 > PT_CUTOFF**2]
+	
+	intParticleAncestors = reduce(operator.concat, [hepmcio.get_ancestors(particle)[:-1] for particle in intParticles])
+
+	particles = []
+	for particle in (intParticles + intParticleAncestors):
+		particles.append(jsonDecoder.decode(jsonEncoder.encode(particle)))
+	
+	vertices = list(map(jsonDecoder.decode, vertices))
+	
+	return {"particles":jsonEncoder.encode(particles), "vertices":jsonEncoder.encode(vertices)}

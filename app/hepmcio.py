@@ -1,4 +1,5 @@
 from itertools import count
+import pypdt
 
 """\
 A simple pure-Python parser for HepMC IO_GenEvent ASCII event files, which may
@@ -9,6 +10,18 @@ like pyhepmc!
 __version__ = "1.0.1"
 __author__ = "Andy Buckley <andy@insectnation.org>"
 
+def get_ancestors(p, dmin=1e-5):
+    rtn = []
+    v = p.vtx_start()
+    if v:
+        d2 = v.pos[0]**2 + v.pos[1]**2 + v.pos[2]**2
+        if d2 > dmin**2:
+            for pp in p.parents():
+                # if pp.status != 2:
+                #     continue
+                rtn += get_ancestors(pp)
+    rtn.append(p)
+    return rtn
 
 class Particle(object):
     def __init__(self, pid=0, mom=[0,0,0,0], barcode=0, event=None):
@@ -17,6 +30,7 @@ class Particle(object):
         self.pid = pid
         self.status = None
         self.mom = list(mom)
+        self.charge = None
         self.nvtx_start = None
         self.nvtx_end = None
         self.mass = None
@@ -32,10 +46,12 @@ class Particle(object):
 
     def children(self):
         return self.vtx_end().children() if self.vtx_end() else None
+
+    
     
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return self.evt == other.evt and self.barcode == other.barcode and self.pid == other.pid and self.status == other.status and self.mom == other.mom and self.nvtx_start == other.nvtx_start and self.nvtx_end == other.nvtx_end and self.mass == other.mass
+            return self.evt == other.evt and self.barcode == other.barcode and self.pid == other.pid and self.status == other.status and self.mom == other.mom and self.nvtx_start == other.nvtx_start and self.nvtx_end == other.nvtx_end and self.mass == other.mass and self.charge == other.charge
         return False
 
     def __repr__(self):
@@ -123,6 +139,7 @@ class HepMCReader(object):
 
     def next(self):
         "Return a new event graph"
+        PDT = pypdt.PDT()
         evt = Event()
         if not self._currentline or self._currentline == "HepMC::IO_GenEvent-END_EVENT_LISTING":
             return None
@@ -152,6 +169,7 @@ class HepMCReader(object):
                     p.status = int(vals[8])
                     p.nvtx_start = self._currentvtx
                     p.nvtx_end = int(vals[11])
+                    p.charge = PDT[p.barcode] if PDT[p.barcode] else 0.0
                     evt.particles[bc] = p
                 except:
                     print (vals)

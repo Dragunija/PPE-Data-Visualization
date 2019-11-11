@@ -15,10 +15,11 @@
 	</style>
 	<div id="info">Test </div>
 	<script src={{url_for('static', filename='three.js')}}></script>
+	<script src={{url_for('static', filename='math.min.js')}}></script>
 	<script src={{url_for('static', filename='OrbitControls.js')}}></script>
         <script src={{url_for('static', filename='jquery-3.4.1.js')}}></script>
 	<script src={{url_for('static', filename='visualiser.js')}}></script>
-	<script>initVars({{view}}, {{particles | tojson}} );
+	<script>initVars({{particles | tojson}}, {{vertices | tojson}}, {{file | tojson}});
 	</script>
 	
 	
