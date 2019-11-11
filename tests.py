@@ -3,6 +3,9 @@ import os
 import json
 from app import app, mongo, hepmcio, hepmcio_json
 
+__author__ = "Darius Darulis"
+__version__ = "1.0"
+
 testParticle = None
 testVertex = None
 testEvent = None
@@ -74,6 +77,7 @@ class HepMCTests(unittest.TestCase):
 
     def testEventCoding(self):
         evt = self.openEvent()
+
         hepMCEncoder = hepmcio_json.HepMCJSONEncoder()
         hepMCDecoder = hepmcio_json.HepMCJSONDecoder()
         jsonified = hepMCEncoder.encode(evt)

@@ -14,6 +14,10 @@
    as_vertex -- object hook for JSONified vertices, for use with standard JSON decoder
    """
 
+__author__ = "Darius Darulis"
+__version__ = "1.0"
+
+
 import json
 from app import hepmcio
 

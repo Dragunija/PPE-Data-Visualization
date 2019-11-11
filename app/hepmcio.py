@@ -7,8 +7,9 @@ be a lot more convenient than using either the native C++ HepMC API, or wrappers
 like pyhepmc!
 """
 
-__version__ = "1.0.1"
-__author__ = "Andy Buckley <andy@insectnation.org>"
+__version__ = "1.1"
+__author__ = "Andy Buckley, Darius Darulis"
+__email__ = "andy@insectnation.org, darius.dragas@gmail.com"
 
 def get_ancestors(p, dmin=1e-5):
     rtn = []
