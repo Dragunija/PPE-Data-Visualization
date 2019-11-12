@@ -125,7 +125,7 @@ class ParticleEncoder(json.JSONEncoder):
         The returned JSON string contains all the attributes of the object plus type info.
     """
     def default(self,obj):
-        if isinstance(obj,hepmcio.Particle):
+        if isinstance(obj, hepmcio.Particle):
             return {"type":"particle", "event":obj.evt.num, "barcode":obj.barcode, "pid":obj.pid,"charge":obj.charge, "mass":obj.mass, "momentum":obj.mom, "start_vertex":obj.nvtx_start, "end_vertex":obj.nvtx_end, "status":obj.status}
         return json.JSONEncoder.default(self,obj)
 

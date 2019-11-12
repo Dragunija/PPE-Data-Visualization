@@ -1,17 +1,40 @@
-from itertools import count
 import pypdt
 
 """\
 A simple pure-Python parser for HepMC IO_GenEvent ASCII event files, which may
 be a lot more convenient than using either the native C++ HepMC API, or wrappers
 like pyhepmc!
+
+Classes:
+
+Particle -- particle in an event file; represents a particle in the event graph.
+Vertex -- vertex in an event file; represents a vertex in the event graph.
+Event -- event in an event file; represents an event graph. Contains hashmaps of all particles and vertices associated
+with the graph.
+HepMCReader -- the reader class for parsing HepMC files. Can read files using either filename or a file object.
+HepMCWriter -- the writer class for creating HepMC files. Currently unfinished.
+
+Functions:
+
+get_ancestors -- gets all the ancestors of a particle above some energy threshold.
+mk_nx_graph -- creates a NetworkX graph from event data.
 """
 
-__version__ = "1.1"
+__version__ = "1.1.1"
 __author__ = "Andy Buckley, Darius Darulis"
 __email__ = "andy@insectnation.org, darius.dragas@gmail.com"
 
 def get_ancestors(p, dmin=1e-5):
+    """
+    Gets all ancestors of a particle above some energy threshold by traversing vertices.
+
+    Arguments:
+    p -- particle whose ancestors to get.
+    dmin -- energy cut-off for being considered "interesting".
+
+    Returns:
+    rtn -- a list of lists containing interesting ancestor particles.
+    """
     rtn = []
     v = p.vtx_start()
     if v:
@@ -25,27 +48,59 @@ def get_ancestors(p, dmin=1e-5):
     return rtn
 
 class Particle(object):
+    """
+    A particle in a HepMC event graph.
+
+    Methods:
+    vtx_start -- returns the particle's parent vertex from the event graph.
+    vtx_end -- returns the particle's target vertex from the event graph.
+    parents -- returns the particle's parent particles from the event graph.
+    children -- returns the particle's children particles from the event graph.
+    """
     def __init__(self, pid=0, mom=[0,0,0,0], barcode=0, event=None):
+        """
+        Constructor.
+
+        Arguments:
+        pid -- ID identifying particle type.
+        mom -- the particle's momentum.
+        barcode -- barcode uniquely identifying an event graph element.
+        event -- the event the particle is associated with.
+        """
         self.evt = event
         self.barcode = barcode
         self.pid = pid
         self.status = None
         self.mom = list(mom)
         self.charge = None
+        #Start vertex for the particle.
         self.nvtx_start = None
+        #Target vertex for the particle.
         self.nvtx_end = None
         self.mass = None
 
     def vtx_start(self):
+        """
+        Returns the start vertex for the particle from the event graph.
+        """
         return self.evt.vertices.get(self.nvtx_start) if self.evt else None
 
     def vtx_end(self):
+        """
+        Returns the target vertex for the particle from the event graph.
+        """
         return self.evt.vertices.get(self.nvtx_end) if self.evt else None
 
     def parents(self):
+        """
+        Returns parent particles of the particle.
+        """
         return self.vtx_start().parents() if self.vtx_start() else None
 
     def children(self):
+        """
+        Returns the children particles for the particle.
+        """
         return self.vtx_end().children() if self.vtx_end() else None
 
     
@@ -61,15 +116,36 @@ class Particle(object):
 
 
 class Vertex(object):
+    """
+    A vertex in a HepMC event graph. 
+
+    Methods:
+    parents -- returns particles incoming into the vertex.
+    children -- returns particles coming out of the vertex.
+    """
     def __init__(self, pos=[0,0,0,0], barcode=0, event=None):
+        """
+        Constructor.
+
+        Arguments:
+        pos -- vertex coordinates.
+        barcode -- barcode uniquely identifying an event element.
+        event -- the event the vertex is associated with.
+        """
         self.evt = event
         self.pos = list(pos)
         self.barcode = barcode
 
     def parents(self):
+        """
+        Returns particles coming into the vertex by comparing barcodes.
+        """
         return [p for p in self.evt.particles.values() if p.nvtx_end == self.barcode]
 
     def children(self):
+        """
+        Returns particles coming out of the vertex by comparing barcodes.
+        """
         return [p for p in self.evt.particles.values() if p.nvtx_start == self.barcode]
 
     def __eq__(self, other):
@@ -83,9 +159,20 @@ class Vertex(object):
 
 
 class Event(object):
-    nos = count(1)
+    """
+    An event represnting a HepMC graph.
+    """
     def __init__(self):
-        self.no = next(self.nos)
+        """
+        Constructor.
+        no -- the order of the event in the file.
+        num -- barcode uniquely identifying the event.
+        units -- the physical units used in the event.
+        xsec --
+        particles -- a hashmap of particles in the event.
+        vertices -- a hashmap of vertices in the event.
+        """
+        self.no = None
         self.num = None
         self.weights = None
         self.units = [None, None]
@@ -139,6 +226,12 @@ class HepMCReader(object):
         return True
 
     def next(self):
+        """
+        Gets next event in file. Returns none if no events are left.
+
+        Returns:
+        evt -- next event in file.
+        """
         "Return a new event graph"
         PDT = pypdt.PDT()
         evt = Event()
@@ -170,7 +263,7 @@ class HepMCReader(object):
                     p.status = int(vals[8])
                     p.nvtx_start = self._currentvtx
                     p.nvtx_end = int(vals[11])
-                    p.charge = PDT[p.barcode] if PDT[p.barcode] else 0.0
+                    p.charge = PDT[p.barcode].charge if PDT[p.barcode] else 0.0
                     evt.particles[bc] = p
                 except:
                     print (vals)
@@ -186,9 +279,19 @@ class HepMCReader(object):
         return evt
     
     def all_events(self):
+        """
+        Utility function to get all events in the file. Returns empty list if no events in file.
+
+        Returns:
+        events -- a list of events in the file.
+        """
+        #Counter for the number of objects in file.
+        no = 1
         events = []
         evt = self.next()
         while evt is not None:
+            evt.no = no
+            no += 1
             events.append(evt)
             evt = self.next()
         return events
